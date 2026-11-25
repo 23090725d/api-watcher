@@ -42,7 +42,9 @@ export function parseInterval(text: string): number {
 export function formatInterval(duration_ms: number): string {
   for (let [unit, unit_ms] of intervalUnits) {
     if (duration_ms >= unit_ms) {
-      return Math.floor((duration_ms / unit_ms) * 10) / 10 + unit
+      let value = duration_ms / unit_ms
+      // keep up to 2 decimal places, without trailing zeros
+      return Math.round(value * 100) / 100 + unit
     }
   }
   return duration_ms + 'ms'
