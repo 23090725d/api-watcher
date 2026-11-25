@@ -8,23 +8,45 @@ let intervalUnits: [string, number][] = [
 ]
 
 export function parseInterval(text: string): number {
-  text = text.trim().toLowerCase()
-  for (let [unit, unit_ms] of intervalUnits) {
-    if (text.endsWith(unit)) {
-      let num = Number(text.slice(0, -unit.length).trim())
-      if (isNaN(num)) throw `Invalid interval: ${text}`
-      return num * unit_ms
+  let input = text.trim().toLowerCase()
+  if (!input) throw `Invalid interval: empty value`
+
+  let unit_ms = 1 // unitless input is treated as milliseconds
+  let num_text = input
+
+  if (input.endsWith('ms')) {
+    // checked before 's' because 'ms' also ends with 's'
+    unit_ms = 1
+    num_text = input.slice(0, -2).trim()
+  } else {
+    for (let [unit, unit_ms_of_unit] of intervalUnits) {
+      if (input.endsWith(unit)) {
+        unit_ms = unit_ms_of_unit
+        num_text = input.slice(0, -unit.length).trim()
+        break
+      }
     }
   }
-  let num = Number(text)
-  if (isNaN(num)) throw `Invalid interval: ${text}`
-  return num
+
+  let num = Number(num_text)
+  if (isNaN(num) || !Number.isFinite(num)) {
+    throw `Invalid interval: ${text}`
+  }
+
+  let duration_ms = num * unit_ms
+  if (!Number.isFinite(duration_ms) || duration_ms <= 0) {
+    throw `Invalid interval: ${text} (must be a positive duration)`
+  }
+
+  return duration_ms
 }
 
 export function formatInterval(duration_ms: number): string {
   for (let [unit, unit_ms] of intervalUnits) {
     if (duration_ms >= unit_ms) {
-      return Math.floor((duration_ms / unit_ms) * 10) / 10 + unit
+      let value = duration_ms / unit_ms
+      // keep up to 2 decimal places, without trailing zeros
+      return Math.round(value * 100) / 100 + unit
     }
   }
   return duration_ms + 'ms'

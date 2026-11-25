@@ -384,13 +384,18 @@ function Submit(attrs: {}, context: DynamicContext) {
     let user_id = user!.id!
     let body = getContextFormBody(context)
     let input = submitParser.parse(body)
+    let min_interval = parseInterval(input.min_interval)
+    let max_interval = parseInterval(input.max_interval)
+    if (min_interval > max_interval) {
+      throw `validation error: min interval (${formatInterval(min_interval)}) cannot be longer than max interval (${formatInterval(max_interval)})`
+    }
     let id = proxy.endpoint.push({
       title: input.title,
       desc: input.desc ?? '',
       code: input.code,
       user_id,
-      min_interval: parseInterval(input.min_interval),
-      max_interval: parseInterval(input.max_interval),
+      min_interval,
+      max_interval,
       extract_field: input.extract_field || '$',
       forecast_samples: parseForecastSamples(input.forecast_samples),
     })
@@ -1180,12 +1185,16 @@ function UpdateField(attrs: {}, context: WsContext) {
       }
       case 'min_interval': {
         let interval = parseInterval(value)
+        let endpoint = proxy.endpoint[id]
+        if (interval > endpoint.max_interval) {
+          throw `validation error: min interval (${formatInterval(interval)}) cannot be longer than max interval (${formatInterval(endpoint.max_interval)})`
+        }
         update(proxy.endpoint, { id }, { min_interval: interval })
         commitField([
           [
             'update-text',
             `${container} .field[data-field="min_interval"] .view-mode`,
-            formatInterval(Number(value)),
+            formatInterval(interval),
           ],
         ])
         checkSchedule(proxy.endpoint[id])
@@ -1193,12 +1202,16 @@ function UpdateField(attrs: {}, context: WsContext) {
       }
       case 'max_interval': {
         let interval = parseInterval(value)
+        let endpoint = proxy.endpoint[id]
+        if (interval < endpoint.min_interval) {
+          throw `validation error: max interval (${formatInterval(interval)}) cannot be shorter than min interval (${formatInterval(endpoint.min_interval)})`
+        }
         update(proxy.endpoint, { id }, { max_interval: interval })
         commitField([
           [
             'update-text',
             `${container} .field[data-field="max_interval"] .view-mode`,
-            formatInterval(Number(value)),
+            formatInterval(interval),
           ],
         ])
         checkSchedule(proxy.endpoint[id])
